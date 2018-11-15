@@ -61,9 +61,7 @@ func main() {
 			}
 		}
 
-		// Or imgio.JPEGEncoder(95) as encoder for JPG with quality of 95%
 		if err := imgio.Save(config.ImagesOutput+nameFile+".png", resized, imgio.PNGEncoder()); err != nil {
-			// if err := imgio.Save(config.ImagesOutput+files[i].Name()[:len(files[i].Name())-4]+".jpg", resized, imgio.JPEGEncoder(100)); err != nil {
 			fmt.Println("\nA ocurrido un error con la Imagen #", i+1, " Nombre:", files[i].Name())
 			panic(err)
 		}
