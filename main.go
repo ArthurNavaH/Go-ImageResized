@@ -61,7 +61,7 @@ func main() {
 			}
 		}
 
-		if err := imgio.Save(config.ImagesOutput+nameFile+".png", resized, imgio.PNGEncoder()); err != nil {
+		if err := imgio.Save(config.ImagesOutput+nameFile+".png", resized, imgio.PNG); err != nil {
 			fmt.Println("\nA ocurrido un error con la Imagen #", i+1, " Nombre:", files[i].Name())
 			panic(err)
 		}
