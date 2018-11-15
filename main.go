@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"os"
+	"runtime"
+	"sync"
 
 	"github.com/anthonynsimon/bild/imgio"
 	"github.com/anthonynsimon/bild/transform"
@@ -15,10 +18,15 @@ type config struct {
 	WidthImage   int    `json:"widthImage"`
 }
 
+var wg sync.WaitGroup
+
 func main() {
-	fmt.Println("-----------------------------------------------------------------")
-	fmt.Println("- Iniciando algoritmo E.A.M.B (Escalo Automatico de Mapa de Bits ")
-	fmt.Println("-----------------------------------------------------------------\n")
+	maxProcs := runtime.NumCPU()
+	runtime.GOMAXPROCS(maxProcs)
+
+	PrintStart()
+	defer PrintEnd()
+
 	var config config
 
 	cj, err := ioutil.ReadFile("./config.json")
@@ -34,42 +42,62 @@ func main() {
 	files, _ := ioutil.ReadDir(config.ImagesInput)
 
 	for i := 0; i < len(files); i++ {
-		var width, height, newWidth, newHeight, difWidth int
-		var porDifWidth float32
-
-		img, err := imgio.Open(config.ImagesInput + files[i].Name())
-
-		if err != nil {
-			panic(err)
-		}
-		width = img.Bounds().Max.X
-		height = img.Bounds().Max.Y
-
-		newWidth = config.WidthImage
-
-		difWidth = width - newWidth
-		porDifWidth = float32(difWidth) / float32(width)
-
-		newHeight = height - int(float32(height)*porDifWidth)
-
-		resized := transform.Resize(img, newWidth, newHeight, transform.Linear)
-
-		var nameFile string
-		for x, v := range files[i].Name() {
-			if v == '.' {
-				nameFile = files[i].Name()[:x]
-			}
-		}
-
-		if err := imgio.Save(config.ImagesOutput+nameFile+".png", resized, imgio.PNG); err != nil {
-			fmt.Println("\nA ocurrido un error con la Imagen #", i+1, " Nombre:", files[i].Name())
-			panic(err)
-		}
-
-		fmt.Println("Imagen #", i+1, " Lista! +", "Nombre :", files[i].Name(), ";")
+		wg.Add(1)
+		go SaveImage(config, files[i], i)
 	}
 
+	wg.Wait()
+}
+
+func PrintStart() {
+	fmt.Println("-----------------------------------------------------------------")
+	fmt.Println("- Iniciando algoritmo E.A.M.B (Escalo Automatico de Mapa de Bits ")
+	fmt.Println("-----------------------------------------------------------------\n")
+}
+
+func PrintEnd() {
 	fmt.Println("\n-----------------------")
 	fmt.Println("- Ejecusion terminada -")
 	fmt.Println("-----------------------\n")
+}
+
+func SaveImage(config config, file os.FileInfo, index int) {
+	defer wg.Done()
+
+	var width, height, newWidth, newHeight, difWidth int
+	var porDifWidth float32
+
+	fmt.Println(file.Name())
+
+	img, err := imgio.Open(config.ImagesInput + file.Name())
+
+	if err != nil {
+		panic(err)
+	}
+	width = img.Bounds().Max.X
+	height = img.Bounds().Max.Y
+
+	newWidth = config.WidthImage
+
+	difWidth = width - newWidth
+	porDifWidth = float32(difWidth) / float32(width)
+
+	newHeight = height - int(float32(height)*porDifWidth)
+
+	resized := transform.Resize(img, newWidth, newHeight, transform.Linear)
+
+	var nameFile string
+	for x, v := range file.Name() {
+		if v == '.' {
+			nameFile = file.Name()[:x]
+		}
+	}
+
+	if err := imgio.Save(config.ImagesOutput+nameFile+".png", resized, imgio.PNG); err != nil {
+		fmt.Println("\nA ocurrido un error con la Imagen #", index+1, " Nombre:", file.Name())
+		panic(err)
+	}
+
+	fmt.Println("Imagen #", index+1, " Lista! +", "Nombre :", file.Name(), ";")
+
 }
